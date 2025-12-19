@@ -1,0 +1,18 @@
+# Config with real settings
+config.py
+
+# Cache
+cache/
+*.pkl
+
+# Documents (user adds their own)
+docs/*.pdf
+docs/*.txt
+
+# Python
+__pycache__/
+*.pyc
+
+# IDE
+.vscode/
+.idea/
