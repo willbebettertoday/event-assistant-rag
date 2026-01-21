@@ -28,7 +28,7 @@ RAG-powered chatbot for answering questions about company events using LangChain
 
 You need an Ollama server running locally or on a remote machine.
 
-~~~bash
+```bash
 # Install Ollama (macOS/Linux)
 curl -fsSL https://ollama.com/install.sh | sh
 
@@ -38,51 +38,51 @@ ollama pull mxbai-embed-large
 
 # Start server (runs on localhost:11434 by default)
 ollama serve
-~~~
+```
 
 ### 2. Install dependencies
 
-~~~bash
+```bash
 pip install -r requirements.txt
-~~~
+```
 
-### 2. Setup config
+### 3. Setup config
 
-~~~bash
+```bash
 cp config_example.py config.py
 # Edit config.py with your Ollama server URL
-~~~
+```
 
-### 3. Add your documents
+### 4. Add your documents
 
 Put PDF and TXT files in the `docs/` folder.
 
-### 4. Run
+### 5. Run
 
-~~~bash
+```bash
 # Command line (simple)
 python main.py
 
-# Web interface (optional)
+# Web interface (with XAI visualization)
 python app.py
-~~~
+```
 
 ## Project Structure
 
-~~~
+```
 marbet-event-assistant/
 ├── README.md
 ├── requirements.txt
 ├── config_example.py
 ├── config.py           ← your settings (gitignored)
-├── main.py             ← CLI version (~100 lines)
-├── app.py              ← Web UI version (optional)
+├── main.py             ← CLI version
+├── app.py              ← Web UI with XAI visualization
 └── docs/               ← put your documents here
-~~~
+```
 
 ## How RAG Works
 
-~~~
+```
 1. Load Documents
    PDF/TXT files → split into chunks
 
@@ -97,7 +97,7 @@ marbet-event-assistant/
 
 5. Generate Answer
    LLM reads context + question → generates answer
-~~~
+```
 
 ## Configuration
 
@@ -108,9 +108,14 @@ marbet-event-assistant/
 | `EMBED_MODEL` | Model for embeddings |
 | `DOCS_FOLDER` | Path to documents |
 
-## Screenshots
+## Known Limitations & Future Improvements
 
-*Add screenshots of your Gradio interface here*
+- **Temperature setting (0.8)** is higher than typical for QA systems (0.1-0.3 recommended) — may cause occasional hallucinations
+- **Relevance scores in XAI visualization** are based on retrieval order, not actual similarity distances from FAISS
+- **Vectorstore caching** is implemented only in CLI version
+- **No persistent storage** for web UI — cache rebuilds on each restart
+
+These trade-offs were made for simplicity within the project scope.
 
 ## License
 
