@@ -17,7 +17,10 @@ EMBED_MODEL = "mxbai-embed-large:latest"   # for embeddings
 DOCS_FOLDER = "./docs"
 CACHE_DIR = "./cache"
 
-# Use cached vectorstore (faster startup after first run)
+# Governs main.py's cache-read only; app.py never caches and rebuilds the
+# vector store on every launch. The cache is a FAISS index directory
+# (save_local/load_local), which is pickle-backed internally, not a plain
+# file. Set False to always rebuild from docs/ instead of reading it.
 USE_CACHE = True
 
 # Retrieval

@@ -33,10 +33,6 @@ from src.retrieval import (  # noqa: E402
     source_label,
 )
 
-SYSTEM_PROMPT = """You are a helpful event assistant.
-Answer questions based ONLY on the provided documents.
-If the answer is not in the documents, say you don't have that information."""
-
 # Global variables
 qa_chain = None
 vectorstore = None
@@ -59,9 +55,7 @@ def setup_chain():
     embeddings = OllamaEmbeddings(base_url=OLLAMA_SERVER, model=EMBED_MODEL)
     vectorstore = build_vectorstore(chunks, embeddings)
 
-    chain = build_chain(
-        vectorstore, OLLAMA_SERVER, CHAT_MODEL, TEMPERATURE, SYSTEM_PROMPT, RETRIEVER_K
-    )
+    chain = build_chain(vectorstore, OLLAMA_SERVER, CHAT_MODEL, TEMPERATURE, RETRIEVER_K)
 
     print("Ready!")
     return chain, vectorstore

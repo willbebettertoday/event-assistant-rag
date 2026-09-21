@@ -39,10 +39,6 @@ except ImportError:
 os.makedirs(DOCS_FOLDER, exist_ok=True)
 os.makedirs(CACHE_DIR, exist_ok=True)
 
-SYSTEM_PROMPT = """You are a helpful event assistant.
-Answer questions based ONLY on the provided documents.
-If the answer is not in the documents, say you don't have that information."""
-
 
 def rebuild_vectorstore():
     """Load documents from disk, chunk them and build a fresh vector store."""
@@ -96,9 +92,7 @@ def main():
     vectorstore = get_vectorstore()
 
     # Setup chain
-    qa_chain = build_chain(
-        vectorstore, OLLAMA_SERVER, CHAT_MODEL, TEMPERATURE, SYSTEM_PROMPT, RETRIEVER_K
-    )
+    qa_chain = build_chain(vectorstore, OLLAMA_SERVER, CHAT_MODEL, TEMPERATURE, RETRIEVER_K)
 
     # Chat loop
     print()
@@ -124,9 +118,7 @@ def main():
         if query.lower() == "rebuild":
             print("Rebuilding vectorstore...")
             vectorstore = rebuild_vectorstore()
-            qa_chain = build_chain(
-                vectorstore, OLLAMA_SERVER, CHAT_MODEL, TEMPERATURE, SYSTEM_PROMPT, RETRIEVER_K
-            )
+            qa_chain = build_chain(vectorstore, OLLAMA_SERVER, CHAT_MODEL, TEMPERATURE, RETRIEVER_K)
             print("Done! You can ask questions now.\n")
             continue
 
