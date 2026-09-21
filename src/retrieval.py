@@ -24,6 +24,20 @@ def distances_to_similarity(distances):
     return [1.0 / (1.0 + float(d)) for d in distances]
 
 
+def retrieval_query(result, fallback):
+    """The question the chain actually retrieved with.
+
+    ConversationalRetrievalChain condenses a follow-up into a standalone
+    question and retrieves with that. Scoring the raw turn instead would
+    chart a different document set than the answer came from.
+    """
+    if isinstance(result, dict):
+        generated = result.get("generated_question")
+        if isinstance(generated, str) and generated:
+            return generated
+    return fallback
+
+
 def source_label(document):
     """Human readable label for a retrieved chunk."""
     source = document.metadata.get("source")

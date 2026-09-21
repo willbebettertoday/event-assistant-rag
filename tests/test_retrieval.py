@@ -1,8 +1,15 @@
 """Tests for src/retrieval.py."""
 
+from pathlib import Path
+
 import pytest
 
-from src.retrieval import distances_to_similarity, retrieve_with_scores, source_label
+from src.retrieval import (
+    distances_to_similarity,
+    retrieval_query,
+    retrieve_with_scores,
+    source_label,
+)
 
 from .conftest import FakeDocument
 
@@ -42,6 +49,50 @@ class TestDistancesToSimilarity:
 
     def test_empty_input_gives_empty_output(self):
         assert distances_to_similarity([]) == []
+
+
+class TestRetrievalQuery:
+    def test_prefers_the_generated_question_when_present(self):
+        result = {"generated_question": "when does the opening ceremony start"}
+        assert retrieval_query(result, "and then?") == "when does the opening ceremony start"
+
+    def test_falls_back_when_the_key_is_absent(self):
+        """No condensation happens on the first turn of a conversation."""
+        assert retrieval_query({"answer": "..."}, "when does it start") == "when does it start"
+
+    def test_falls_back_when_the_value_is_an_empty_string(self):
+        assert retrieval_query({"generated_question": ""}, "when does it start") == (
+            "when does it start"
+        )
+
+    def test_falls_back_when_the_value_is_none(self):
+        assert retrieval_query({"generated_question": None}, "when does it start") == (
+            "when does it start"
+        )
+
+    def test_a_none_result_does_not_raise(self):
+        assert retrieval_query(None, "when does it start") == "when does it start"
+
+
+class TestNoRankBasedScoring:
+    """Guards against the original defect reappearing inline in app.py.
+
+    The bug this task fixes was `relevance = 1.0 - (i * 0.08)`: a chart
+    height derived from a document's position in the result list instead
+    of its real FAISS distance. The tests above only exercise
+    src/retrieval.py, so a future edit could reintroduce the same
+    rank-based arithmetic directly inside app.py's visualize_sources and
+    nothing here would notice. This test reads the source text of app.py
+    to close that gap.
+    """
+
+    def test_app_scores_via_distances_to_similarity_not_rank(self):
+        app_source = (Path(__file__).resolve().parent.parent / "app.py").read_text(
+            encoding="utf-8"
+        )
+        assert "* 0.08" not in app_source
+        assert "1.0 - i" not in app_source
+        assert "distances_to_similarity" in app_source
 
 
 class TestSourceLabel:

@@ -19,7 +19,12 @@ from langchain_ollama import OllamaEmbeddings, OllamaLLM
 matplotlib.use("Agg")  # Gradio renders server side; no interactive backend
 import matplotlib.pyplot as plt  # noqa: E402
 
-from src.retrieval import distances_to_similarity, retrieve_with_scores, source_label  # noqa: E402
+from src.retrieval import (  # noqa: E402
+    distances_to_similarity,
+    retrieval_query,
+    retrieve_with_scores,
+    source_label,
+)
 
 SYSTEM_PROMPT = """You are a helpful event assistant.
 Answer questions based ONLY on the provided documents.
@@ -79,7 +84,8 @@ def setup_chain():
         llm=llm,
         chain_type="stuff",
         retriever=retriever,
-        return_source_documents=True
+        return_source_documents=True,
+        return_generated_question=True
     )
 
     print("Ready!")
@@ -133,7 +139,10 @@ def respond(message, history):
     # Create visualization from the real retrieval scores. The chain's
     # source_documents carry no scores, so re-retrieve through the
     # vectorstore directly to get the FAISS distances behind the chart.
-    scored_docs = retrieve_with_scores(vectorstore, message, k=12)
+    # The chain condenses follow-up questions before retrieving, so score
+    # the question it actually used rather than the raw turn.
+    query = retrieval_query(result, message)
+    scored_docs = retrieve_with_scores(vectorstore, query, k=12)
     fig = visualize_sources(scored_docs)
 
     # Update chat display
