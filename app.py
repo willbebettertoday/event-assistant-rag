@@ -1,20 +1,27 @@
-"""
-Marbet Event Assistant - Web Interface with XAI
+"""Marbet Event Assistant, web interface.
 
-Shows source documents used for answers (Explainable AI)
+Authors: Oleksii Krasnoshtanov, Danil Sysenko
+University: Breda University of Applied Sciences
 
-Run: python app.py
+This is the Gradio app, which also shows which chunks each answer came
+from. For a terminal session, run main.py.
 """
 
 import gradio as gr
 import matplotlib
 import numpy as np
-from config import CHAT_MODEL, DOCS_FOLDER, EMBED_MODEL, OLLAMA_SERVER
-from langchain.chains import ConversationalRetrievalChain
-from langchain.text_splitter import RecursiveCharacterTextSplitter
-from langchain_community.document_loaders import DirectoryLoader, PyPDFDirectoryLoader, TextLoader
-from langchain_community.vectorstores import FAISS
-from langchain_ollama import OllamaEmbeddings, OllamaLLM
+from config import (
+    CHAT_MODEL,
+    CHUNK_OVERLAP,
+    CHUNK_SIZE,
+    DOCS_FOLDER,
+    EMBED_MODEL,
+    OLLAMA_SERVER,
+    RETRIEVER_K,
+    TEMPERATURE,
+)
+
+from src.pipeline import build_chain, build_vectorstore, load_documents, split_documents
 
 matplotlib.use("Agg")  # Gradio renders server side; no interactive backend
 import matplotlib.pyplot as plt  # noqa: E402
@@ -35,57 +42,25 @@ qa_chain = None
 vectorstore = None
 chat_history = []
 
+
 def setup_chain():
     """Load documents and create QA chain"""
+    from langchain_ollama import OllamaEmbeddings
+
     print("Loading documents...")
-    all_docs = []
-
-    # PDFs
-    try:
-        pdf_loader = PyPDFDirectoryLoader(DOCS_FOLDER, extract_images=False)
-        all_docs.extend(pdf_loader.load())
-    except Exception as e:
-        print(f"PDF error: {e}")
-
-    # TXT
-    try:
-        txt_loader = DirectoryLoader(
-            DOCS_FOLDER, glob="**/*.txt",
-            loader_cls=TextLoader,
-            loader_kwargs={"encoding": "utf-8"}
-        )
-        all_docs.extend(txt_loader.load())
-    except Exception as e:
-        print(f"TXT error: {e}")
-
+    all_docs = load_documents(DOCS_FOLDER)
     print(f"Loaded {len(all_docs)} documents")
 
-    # Split
     print("Creating chunks...")
-    splitter = RecursiveCharacterTextSplitter(chunk_size=700, chunk_overlap=300)
-    chunks = splitter.split_documents(all_docs)
+    chunks = split_documents(all_docs, CHUNK_SIZE, CHUNK_OVERLAP)
     print(f"Created {len(chunks)} chunks")
 
-    # Embeddings and vectorstore
     print("Building vector store...")
     embeddings = OllamaEmbeddings(base_url=OLLAMA_SERVER, model=EMBED_MODEL)
-    vectorstore = FAISS.from_documents(chunks, embeddings)
+    vectorstore = build_vectorstore(chunks, embeddings)
 
-    # Chain
-    retriever = vectorstore.as_retriever(search_kwargs={"k": 12})
-    llm = OllamaLLM(
-        base_url=OLLAMA_SERVER,
-        model=CHAT_MODEL,
-        temperature=0.8,
-        system=SYSTEM_PROMPT
-    )
-
-    chain = ConversationalRetrievalChain.from_llm(
-        llm=llm,
-        chain_type="stuff",
-        retriever=retriever,
-        return_source_documents=True,
-        return_generated_question=True
+    chain = build_chain(
+        vectorstore, OLLAMA_SERVER, CHAT_MODEL, TEMPERATURE, SYSTEM_PROMPT, RETRIEVER_K
     )
 
     print("Ready!")
@@ -126,10 +101,7 @@ def respond(message, history):
         return "", history, None
 
     # Get response
-    result = qa_chain.invoke({
-        "question": message,
-        "chat_history": chat_history
-    })
+    result = qa_chain.invoke({"question": message, "chat_history": chat_history})
 
     # Update history
     chat_history.append((message, result["answer"]))
@@ -142,7 +114,7 @@ def respond(message, history):
     # The chain condenses follow-up questions before retrieving, so score
     # the question it actually used rather than the raw turn.
     query = retrieval_query(result, message)
-    scored_docs = retrieve_with_scores(vectorstore, query, k=12)
+    scored_docs = retrieve_with_scores(vectorstore, query, k=RETRIEVER_K)
     fig = visualize_sources(scored_docs)
 
     # Update chat display
